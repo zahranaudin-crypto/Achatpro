@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}Tableau de bord{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-grid-1x2 me-2"></i>Tableau de bord</h1>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-lg-3">
+    <div class="kpi-card" style="background:#1a1a2e;">
+      <div style="font-size:.85rem;opacity:.7;">Fournisseurs</div>
+      <div style="font-size:2.2rem;font-weight:700;">{{ nb_fournisseurs }}</div>
+      <i class="bi bi-building" style="opacity:.3;font-size:2rem;float:right;margin-top:-40px;"></i>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="kpi-card" style="background:#6c757d;">
+      <div style="font-size:.85rem;opacity:.8;">Brouillons</div>
+      <div style="font-size:2.2rem;font-weight:700;">{{ nb_brouillons }}</div>
+      <i class="bi bi-file-earmark" style="opacity:.3;font-size:2rem;float:right;margin-top:-40px;"></i>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="kpi-card" style="background:#0d6efd;">
+      <div style="font-size:.85rem;opacity:.8;">Envoyées</div>
+      <div style="font-size:2.2rem;font-weight:700;">{{ nb_envoyees }}</div>
+      <i class="bi bi-send" style="opacity:.3;font-size:2rem;float:right;margin-top:-40px;"></i>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="kpi-card" style="background:#198754;">
+      <div style="font-size:.85rem;opacity:.8;">Clôturées</div>
+      <div style="font-size:2.2rem;font-weight:700;">{{ nb_cloturees }}</div>
+      <i class="bi bi-check-circle" style="opacity:.3;font-size:2rem;float:right;margin-top:-40px;"></i>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-clock-history me-2"></i>Dernières commandes</span>
+    <a href="{{ url_for('nouvelle_commande') }}" class="btn btn-sm btn-light">
+      <i class="bi bi-plus-lg me-1"></i>Nouvelle
+    </a>
+  </div>
+  <div class="card-body p-0">
+    {% if dernieres %}
+    <table class="table table-hover mb-0">
+      <thead><tr>
+        <th class="ps-3">Numéro</th><th>Fournisseur</th><th>Date</th><th>Statut</th><th>Total TTC</th><th></th>
+      </tr></thead>
+      <tbody>
+        {% for c in dernieres %}
+        <tr>
+          <td class="ps-3 fw-semibold">{{ c.numero }}</td>
+          <td>{{ c.fournisseur.nom }}</td>
+          <td>{{ c.date_creation.strftime('%d/%m/%Y') }}</td>
+          <td>
+            {% set badge = {'Brouillon':'secondary','Envoyee':'primary','Cloturee':'success'} %}
+            <span class="badge bg-{{ badge.get(c.statut, 'secondary') }}">{{ c.statut }}</span>
+          </td>
+          <td>{{ "%.2f"|format(c.total_ttc) }} €</td>
+          <td><a href="{{ url_for('detail_commande', cid=c.id) }}" class="btn btn-sm btn-outline-secondary">Voir</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+      <i class="bi bi-inbox" style="font-size:2.5rem;"></i>
+      <p class="mt-2">Aucune commande pour le moment.</p>
+      <a href="{{ url_for('nouvelle_commande') }}" class="btn btn-primary">Créer une commande</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

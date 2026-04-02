@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+{% block title %}{{ commande['numero'] }}{% endblock %}
+{% block content %}
+{% set badge_map = {'Brouillon':'secondary','Envoyee':'primary','Cloturee':'success'} %}
+{% set label_map = {'Brouillon':'Brouillon','Envoyee':'Envoyée','Cloturee':'Clôturée'} %}
+
+<div class="page-header">
+  <div>
+    <h1>
+      <i class="bi bi-file-earmark-text me-2"></i>{{ commande['numero'] }}
+      <span class="badge bg-{{ badge_map.get(commande['statut'],'secondary') }} ms-2 fs-6">
+        {{ label_map.get(commande['statut'], commande['statut']) }}
+      </span>
+    </h1>
+    <small class="text-muted">Créée le {{ commande['date_creation'][:10] }}</small>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{{ url_for('modifier_commande', cid=commande['id']) }}" class="btn btn-outline-secondary">
+      <i class="bi bi-pencil me-1"></i>Modifier
+    </a>
+    <a href="{{ url_for('telecharger_pdf', cid=commande['id']) }}" class="btn btn-outline-danger">
+      <i class="bi bi-file-earmark-pdf me-1"></i>Télécharger PDF
+    </a>
+    <form method="post" action="{{ url_for('supprimer_commande', cid=commande['id']) }}" class="d-inline"
+          onsubmit="return confirm('Supprimer cette commande ?')">
+      <button class="btn btn-outline-danger"><i class="bi bi-trash me-1"></i>Supprimer</button>
+    </form>
+  </div>
+</div>
+
+<!-- Changement de statut -->
+<div class="mb-4 d-flex align-items-center gap-2">
+  <span class="text-muted small">Changer le statut :</span>
+  {% if commande['statut'] != 'Brouillon' %}
+  <form method="post" action="{{ url_for('changer_statut', cid=commande['id'], statut='Brouillon') }}" class="d-inline">
+    <button class="btn btn-sm btn-outline-secondary">Brouillon</button>
+  </form>
+  {% endif %}
+  {% if commande['statut'] != 'Envoyee' %}
+  <form method="post" action="{{ url_for('changer_statut', cid=commande['id'], statut='Envoyee') }}" class="d-inline">
+    <button class="btn btn-sm btn-outline-primary">Marquer Envoyée</button>
+  </form>
+  {% endif %}
+  {% if commande['statut'] != 'Cloturee' %}
+  <form method="post" action="{{ url_for('changer_statut', cid=commande['id'], statut='Cloturee') }}" class="d-inline">
+    <button class="btn btn-sm btn-outline-success">Clôturer</button>
+  </form>
+  {% endif %}
+</div>
+
+<div class="row g-4">
+  <!-- Fournisseur -->
+  <div class="col-md-4">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-building me-2"></i>Fournisseur</div>
+      <div class="card-body">
+        <p class="fw-bold mb-1">{{ commande['fourn_nom'] }}</p>
+        {% if commande['contact'] %}<p class="mb-1 text-muted small">{{ commande['contact'] }}</p>{% endif %}
+        {% if commande['email'] %}<p class="mb-1"><i class="bi bi-envelope me-1"></i>{{ commande['email'] }}</p>{% endif %}
+        {% if commande['telephone'] %}<p class="mb-1"><i class="bi bi-telephone me-1"></i>{{ commande['telephone'] }}</p>{% endif %}
+        {% if commande['adresse'] %}<p class="mb-0 text-muted small" style="white-space:pre-line;">{{ commande['adresse'] }}</p>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Notes -->
+  <div class="col-md-8">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-chat-left-text me-2"></i>Notes</div>
+      <div class="card-body">
+        {% if commande['notes'] %}
+          <p style="white-space:pre-line;">{{ commande['notes'] }}</p>
+        {% else %}
+          <em class="text-muted">Aucune note.</em>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Lignes -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-list-ul me-2"></i>Lignes de commande</div>
+      <div class="card-body p-0">
+        {% if lignes %}
+        <table class="table mb-0">
+          <thead style="font-size:.8rem;">
+            <tr>
+              <th class="ps-3">Désignation</th><th>Référence</th>
+              <th class="text-end">Qté</th><th>Unité</th>
+              <th class="text-end">P.U. HT</th><th class="text-end">TVA</th>
+              <th class="text-end">Total HT</th><th class="text-end pe-3">Total TTC</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for l in lignes %}
+            {% set ht_l  = l['quantite'] * l['prix_unitaire'] %}
+            {% set ttc_l = ht_l * (1 + l['tva'] / 100) %}
+            <tr>
+              <td class="ps-3">{{ l['designation'] }}</td>
+              <td class="text-muted small">{{ l['reference'] or '—' }}</td>
+              <td class="text-end">{{ l['quantite']|int if l['quantite'] == (l['quantite']|int) else l['quantite'] }}</td>
+              <td>{{ l['unite'] }}</td>
+              <td class="text-end">{{ "%.2f"|format(l['prix_unitaire']) }} €</td>
+              <td class="text-end">{{ l['tva'] }}%</td>
+              <td class="text-end">{{ "%.2f"|format(ht_l) }} €</td>
+              <td class="text-end pe-3 fw-semibold">{{ "%.2f"|format(ttc_l) }} €</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot style="background:#f8f9fa;">
+            <tr>
+              <td colspan="6" class="text-end fw-semibold pe-3">Total HT</td>
+              <td class="text-end fw-semibold">{{ "%.2f"|format(total_ht) }} €</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td colspan="6" class="text-end fw-semibold pe-3">TVA</td>
+              <td class="text-end fw-semibold">{{ "%.2f"|format(total_tva) }} €</td>
+              <td></td>
+            </tr>
+            <tr style="background:var(--primary);color:#fff;">
+              <td colspan="6" class="text-end fw-bold fs-6 pe-3">TOTAL TTC</td>
+              <td colspan="2" class="text-end fw-bold fs-6 pe-3">{{ "%.2f"|format(total_ttc) }} €</td>
+            </tr>
+          </tfoot>
+        </table>
+        {% else %}
+        <p class="text-muted text-center py-4">Aucune ligne.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

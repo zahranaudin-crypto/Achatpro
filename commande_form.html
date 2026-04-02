@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Modifier' if commande else 'Nouvelle' }} commande{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-cart3 me-2"></i>{{ 'Modifier' if commande else 'Nouvelle' }} commande
+    {% if commande %}<small class="text-muted fs-6 ms-2">{{ commande.numero }}</small>{% endif %}
+  </h1>
+  <a href="{{ url_for('commandes') }}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Retour
+  </a>
+</div>
+
+<form method="post">
+  <div class="row g-4">
+    <!-- Infos générales -->
+    <div class="col-lg-4">
+      <div class="card h-100">
+        <div class="card-header"><i class="bi bi-info-circle me-2"></i>Informations</div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Fournisseur <span class="text-danger">*</span></label>
+            <select name="fournisseur_id" class="form-select" required>
+              <option value="">— Choisir —</option>
+              {% for f in fournisseurs %}
+              <option value="{{ f.id }}"
+                {{ 'selected' if commande and commande.fournisseur_id == f.id }}>{{ f.nom }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Notes / Conditions</label>
+            <textarea name="notes" class="form-control" rows="5"
+                      placeholder="Délai de livraison, conditions particulières…">{{ commande.notes if commande else '' }}</textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lignes -->
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-list-ul me-2"></i>Lignes de commande</span>
+          <button type="button" class="btn btn-sm btn-light" id="btn-ajouter">
+            <i class="bi bi-plus-lg me-1"></i>Ajouter une ligne
+          </button>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table mb-0" id="lignes-table">
+              <thead style="font-size:.8rem;">
+                <tr>
+                  <th class="ps-3">Désignation</th>
+                  <th>Référence</th>
+                  <th style="width:70px">Qté</th>
+                  <th style="width:80px">Unité</th>
+                  <th style="width:100px">P.U. HT (€)</th>
+                  <th style="width:70px">TVA %</th>
+                  <th style="width:90px">Total HT</th>
+                  <th style="width:40px"></th>
+                </tr>
+              </thead>
+              <tbody id="lignes-body">
+                {% if commande and commande.lignes %}
+                  {% for l in commande.lignes %}
+                  <tr class="ligne-row">
+                    <td class="ps-3"><input type="text" name="designation" class="form-control form-control-sm" value="{{ l.designation }}" required placeholder="Désignation"></td>
+                    <td><input type="text" name="reference" class="form-control form-control-sm" value="{{ l.reference or '' }}" placeholder="Réf."></td>
+                    <td><input type="number" name="quantite" class="form-control form-control-sm qty-input" value="{{ l.quantite }}" min="0" step="any"></td>
+                    <td><input type="text" name="unite" class="form-control form-control-sm" value="{{ l.unite }}"></td>
+                    <td><input type="number" name="prix_unitaire" class="form-control form-control-sm pu-input" value="{{ l.prix_unitaire }}" min="0" step="0.01"></td>
+                    <td><input type="number" name="tva" class="form-control form-control-sm tva-input" value="{{ l.tva }}" min="0" step="0.1"></td>
+                    <td><span class="total-ligne fw-semibold text-end d-block" style="font-size:.9rem;padding-top:6px;">{{ "%.2f"|format(l.total_ligne) }} €</span></td>
+                    <td><button type="button" class="btn btn-sm btn-outline-danger btn-suppr"><i class="bi bi-x"></i></button></td>
+                  </tr>
+                  {% endfor %}
+                {% else %}
+                  <!-- ligne vide initiale -->
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card-footer d-flex justify-content-end gap-4 py-3">
+          <span class="text-muted">Total HT : <strong id="total-ht">0.00 €</strong></span>
+          <span class="text-muted">TVA : <strong id="total-tva">0.00 €</strong></span>
+          <span>Total TTC : <strong id="total-ttc" class="fs-5" style="color:var(--primary);">0.00 €</strong></span>
+        </div>
+      </div>
+
+      <div class="mt-3 d-flex gap-2 justify-content-end">
+        <a href="{{ url_for('commandes') }}" class="btn btn-outline-secondary">Annuler</a>
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-lg me-1"></i>
+          {{ 'Enregistrer les modifications' if commande else 'Créer la commande' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const ligneTemplate = `
+<tr class="ligne-row">
+  <td class="ps-3"><input type="text" name="designation" class="form-control form-control-sm" required placeholder="Désignation"></td>
+  <td><input type="text" name="reference" class="form-control form-control-sm" placeholder="Réf."></td>
+  <td><input type="number" name="quantite" class="form-control form-control-sm qty-input" value="1" min="0" step="any"></td>
+  <td><input type="text" name="unite" class="form-control form-control-sm" value="unité"></td>
+  <td><input type="number" name="prix_unitaire" class="form-control form-control-sm pu-input" value="0" min="0" step="0.01"></td>
+  <td><input type="number" name="tva" class="form-control form-control-sm tva-input" value="20" min="0" step="0.1"></td>
+  <td><span class="total-ligne fw-semibold text-end d-block" style="font-size:.9rem;padding-top:6px;">0.00 €</span></td>
+  <td><button type="button" class="btn btn-sm btn-outline-danger btn-suppr"><i class="bi bi-x"></i></button></td>
+</tr>`;
+
+document.getElementById('btn-ajouter').addEventListener('click', () => {
+  document.getElementById('lignes-body').insertAdjacentHTML('beforeend', ligneTemplate);
+  recalcAll();
+});
+
+document.getElementById('lignes-body').addEventListener('input', e => {
+  if (e.target.classList.contains('qty-input') ||
+      e.target.classList.contains('pu-input') ||
+      e.target.classList.contains('tva-input')) {
+    recalcAll();
+  }
+});
+
+document.getElementById('lignes-body').addEventListener('click', e => {
+  if (e.target.closest('.btn-suppr')) {
+    e.target.closest('tr').remove();
+    recalcAll();
+  }
+});
+
+function recalcAll() {
+  let totalHT = 0, totalTTC = 0;
+  document.querySelectorAll('.ligne-row').forEach(row => {
+    const qty = parseFloat(row.querySelector('.qty-input').value) || 0;
+    const pu  = parseFloat(row.querySelector('.pu-input').value)  || 0;
+    const tva = parseFloat(row.querySelector('.tva-input').value) || 0;
+    const ht  = qty * pu;
+    row.querySelector('.total-ligne').textContent = ht.toFixed(2) + ' €';
+    totalHT  += ht;
+    totalTTC += ht * (1 + tva / 100);
+  });
+  document.getElementById('total-ht').textContent  = totalHT.toFixed(2)  + ' €';
+  document.getElementById('total-tva').textContent = (totalTTC - totalHT).toFixed(2) + ' €';
+  document.getElementById('total-ttc').textContent = totalTTC.toFixed(2) + ' €';
+}
+
+// Ligne vide si aucune ligne existante
+if (document.querySelectorAll('.ligne-row').length === 0) {
+  document.getElementById('lignes-body').insertAdjacentHTML('beforeend', ligneTemplate);
+}
+recalcAll();
+</script>
+{% endblock %}

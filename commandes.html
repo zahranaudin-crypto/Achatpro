@@ -1,0 +1,190 @@
+{% extends 'base.html' %}
+{% block title %}Commandes{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1><i class="bi bi-cart3 me-2"></i>Commandes</h1>
+  <a href="{{ url_for('nouvelle_commande') }}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i>Nouvelle commande
+  </a>
+</div>
+
+<!-- ── Barre de recherche + filtres ── -->
+<div class="card mb-4">
+  <div class="card-body py-3">
+    <form method="get" action="{{ url_for('commandes') }}" id="filter-form">
+      <div class="row g-2 align-items-end">
+
+        <!-- Recherche texte -->
+        <div class="col-12 col-md-4">
+          <label class="form-label mb-1 small fw-semibold text-muted">RECHERCHE</label>
+          <div class="input-group">
+            <span class="input-group-text bg-white border-end-0">
+              <i class="bi bi-search text-muted"></i>
+            </span>
+            <input type="text" name="q" class="form-control border-start-0 ps-0"
+                   placeholder="N° commande, fournisseur, notes…"
+                   value="{{ q }}">
+          </div>
+        </div>
+
+        <!-- Fournisseur -->
+        <div class="col-6 col-md-2">
+          <label class="form-label mb-1 small fw-semibold text-muted">FOURNISSEUR</label>
+          <select name="fournisseur_id" class="form-select">
+            <option value="">Tous</option>
+            {% for f in fournisseurs_list %}
+            <option value="{{ f['id'] }}" {{ 'selected' if fournisseur_id == f['id']|string }}>{{ f['nom'] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Statut -->
+        <div class="col-6 col-md-2">
+          <label class="form-label mb-1 small fw-semibold text-muted">STATUT</label>
+          <select name="statut" class="form-select">
+            <option value="">Tous</option>
+            <option value="Brouillon" {{ 'selected' if statut_filtre=='Brouillon' }}>Brouillon</option>
+            <option value="Envoyee"   {{ 'selected' if statut_filtre=='Envoyee' }}>Envoyée</option>
+            <option value="Cloturee"  {{ 'selected' if statut_filtre=='Cloturee' }}>Clôturée</option>
+          </select>
+        </div>
+
+        <!-- Période -->
+        <div class="col-6 col-md-2">
+          <label class="form-label mb-1 small fw-semibold text-muted">DU</label>
+          <input type="date" name="date_debut" class="form-control" value="{{ date_debut }}">
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label mb-1 small fw-semibold text-muted">AU</label>
+          <input type="date" name="date_fin" class="form-control" value="{{ date_fin }}">
+        </div>
+
+      </div>
+
+      <!-- Ligne 2 : tri + boutons -->
+      <div class="row g-2 align-items-center mt-1">
+        <div class="col-auto">
+          <label class="form-label mb-0 small fw-semibold text-muted me-1">TRIER PAR</label>
+          <select name="tri" class="form-select form-select-sm d-inline-block w-auto">
+            <option value="date_desc" {{ 'selected' if tri=='date_desc' }}>Date ↓</option>
+            <option value="date_asc"  {{ 'selected' if tri=='date_asc' }}>Date ↑</option>
+            <option value="num_desc"  {{ 'selected' if tri=='num_desc' }}>N° ↓</option>
+            <option value="num_asc"   {{ 'selected' if tri=='num_asc' }}>N° ↑</option>
+            <option value="fourn_asc" {{ 'selected' if tri=='fourn_asc' }}>Fournisseur A→Z</option>
+          </select>
+        </div>
+        <div class="col-auto ms-auto d-flex gap-2">
+          {% if filtres_actifs %}
+          <a href="{{ url_for('commandes') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-x-circle me-1"></i>Réinitialiser
+          </a>
+          {% endif %}
+          <button type="submit" class="btn btn-sm btn-primary">
+            <i class="bi bi-funnel me-1"></i>Filtrer
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── Résultats ── -->
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center py-2">
+    <span class="small">
+      <strong>{{ commandes|length }}</strong> commande{{ 's' if commandes|length != 1 }}
+      {% if filtres_actifs %}<span class="text-warning ms-1"><i class="bi bi-funnel-fill"></i> Filtres actifs</span>{% endif %}
+    </span>
+    {% if commandes %}
+    <span class="text-white-50 small">
+      Total TTC filtré :
+      <strong>{{ "%.2f"|format(commandes | sum(attribute='total_ttc')) }} €</strong>
+    </span>
+    {% endif %}
+  </div>
+  <div class="card-body p-0">
+    {% if commandes %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" id="table-commandes">
+        <thead>
+          <tr>
+            <th class="ps-3">Numéro</th>
+            <th>Fournisseur</th>
+            <th>Date</th>
+            <th class="text-center">Lignes</th>
+            <th class="text-end">Total HT</th>
+            <th class="text-end">Total TTC</th>
+            <th>Statut</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in commandes %}
+          {% set badge_map = {'Brouillon':'secondary','Envoyee':'primary','Cloturee':'success'} %}
+          {% set label_map = {'Brouillon':'Brouillon','Envoyee':'Envoyée','Cloturee':'Clôturée'} %}
+          <tr>
+            <td class="ps-3 fw-semibold">
+              {% if q %}
+                {{ c['numero'] | replace(q, '<mark>' ~ q ~ '</mark>') | safe }}
+              {% else %}
+                {{ c['numero'] }}
+              {% endif %}
+            </td>
+            <td>
+              {% if q %}
+                {{ c['fourn_nom'] | replace(q, '<mark>' ~ q ~ '</mark>') | safe }}
+              {% else %}
+                {{ c['fourn_nom'] }}
+              {% endif %}
+            </td>
+            <td>{{ c['date_creation'][:10] }}</td>
+            <td class="text-center">
+              <span class="badge bg-light text-dark">{{ c['nb_lignes'] }}</span>
+            </td>
+            <td class="text-end text-muted">{{ "%.2f"|format(c['total_ht']) }} €</td>
+            <td class="text-end fw-semibold">{{ "%.2f"|format(c['total_ttc']) }} €</td>
+            <td>
+              <span class="badge bg-{{ badge_map.get(c['statut'], 'secondary') }}">
+                {{ label_map.get(c['statut'], c['statut']) }}
+              </span>
+            </td>
+            <td class="text-end pe-3">
+              <a href="{{ url_for('detail_commande', cid=c['id']) }}"
+                 class="btn btn-sm btn-outline-secondary" title="Voir">
+                <i class="bi bi-eye"></i>
+              </a>
+              <a href="{{ url_for('telecharger_pdf', cid=c['id']) }}"
+                 class="btn btn-sm btn-outline-danger ms-1" title="PDF">
+                <i class="bi bi-file-earmark-pdf"></i>
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+      <i class="bi bi-search" style="font-size:2.5rem;"></i>
+      <p class="mt-2 mb-1">Aucune commande ne correspond à votre recherche.</p>
+      {% if filtres_actifs %}
+      <a href="{{ url_for('commandes') }}" class="btn btn-sm btn-outline-secondary mt-1">
+        <i class="bi bi-x-circle me-1"></i>Réinitialiser les filtres
+      </a>
+      {% else %}
+      <a href="{{ url_for('nouvelle_commande') }}" class="btn btn-primary mt-1">Créer une commande</a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Soumission auto du formulaire au changement des selects et dates
+document.querySelectorAll('#filter-form select, #filter-form input[type=date]')
+  .forEach(el => el.addEventListener('change', () => document.getElementById('filter-form').submit()));
+</script>
+{% endblock %}

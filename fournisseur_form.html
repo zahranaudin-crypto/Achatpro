@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Modifier' if fournisseur else 'Nouveau' }} fournisseur{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-building me-2"></i>{{ 'Modifier' if fournisseur else 'Nouveau' }} fournisseur</h1>
+  <a href="{{ url_for('fournisseurs') }}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Retour
+  </a>
+</div>
+
+<div class="card" style="max-width:680px;">
+  <div class="card-header">Informations fournisseur</div>
+  <div class="card-body">
+    <form method="post">
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Nom <span class="text-danger">*</span></label>
+        <input type="text" name="nom" class="form-control"
+               value="{{ fournisseur.nom if fournisseur else '' }}" required>
+      </div>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Contact</label>
+          <input type="text" name="contact" class="form-control"
+                 value="{{ fournisseur.contact if fournisseur else '' }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Téléphone</label>
+          <input type="text" name="telephone" class="form-control"
+                 value="{{ fournisseur.telephone if fournisseur else '' }}">
+        </div>
+      </div>
+      <div class="mb-3 mt-3">
+        <label class="form-label">Email</label>
+        <input type="email" name="email" class="form-control"
+               value="{{ fournisseur.email if fournisseur else '' }}">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Adresse</label>
+        <textarea name="adresse" class="form-control" rows="3">{{ fournisseur.adresse if fournisseur else '' }}</textarea>
+      </div>
+      <div class="mb-4">
+        <label class="form-label">SIRET</label>
+        <input type="text" name="siret" class="form-control"
+               value="{{ fournisseur.siret if fournisseur else '' }}" placeholder="000 000 000 00000">
+      </div>
+      <button type="submit" class="btn btn-primary">
+        <i class="bi bi-check-lg me-1"></i>
+        {{ 'Enregistrer les modifications' if fournisseur else 'Créer le fournisseur' }}
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}
