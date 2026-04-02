@@ -13,8 +13,11 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
 
 app = Flask(__name__)
-app.secret_key = 'achatpro_secret_2024'
-DATABASE = os.path.join(os.path.dirname(__file__), 'commandes.db')
+# Clé secrète : variable d'environnement en prod, valeur par défaut en local
+app.secret_key = os.environ.get('SECRET_KEY', 'achatpro_secret_local_2024')
+# Base de données : dossier /tmp sur Render (persistant dans le disque), local sinon
+DATABASE = os.environ.get('DATABASE_PATH',
+           os.path.join(os.path.dirname(__file__), 'commandes.db'))
 
 # ── BASE DE DONNÉES ────────────────────────────────────────────────────────────
 
@@ -470,7 +473,9 @@ def telecharger_pdf(cid):
                      mimetype='application/pdf')
 
 # ── DÉMARRAGE ──────────────────────────────────────────────────────────────────
+# init_db() est appelé au chargement du module (fonctionne avec gunicorn ET python app.py)
+with app.app_context():
+    init_db()
 
 if __name__ == '__main__':
-    init_db()
     app.run(debug=True, port=5000)
